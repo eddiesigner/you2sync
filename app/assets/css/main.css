@@ -1,0 +1,170 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * The app is dark-only. Both :root and .dark carry the same palette so
+ * shadcn components render correctly regardless of the class.
+ */
+:root,
+.dark {
+  --radius: 0.75rem;
+
+  --background: hsl(240 6% 4%);
+  --foreground: hsl(0 0% 96%);
+  --card: hsl(240 5% 8%);
+  --card-foreground: hsl(0 0% 96%);
+  --popover: hsl(240 5% 9%);
+  --popover-foreground: hsl(0 0% 96%);
+
+  /* Brand primary, as requested: deep violet. Text on it is white. */
+  --primary: hsl(261.2 72.6% 22.9%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  /* Lighter tint of the primary for text, rings and glows on dark surfaces. */
+  --primary-glow: hsl(261 85% 72%);
+
+  --secondary: hsl(240 5% 14%);
+  --secondary-foreground: hsl(0 0% 96%);
+  --muted: hsl(240 5% 13%);
+  --muted-foreground: hsl(240 5% 66%);
+  --accent: hsl(240 5% 16%);
+  --accent-foreground: hsl(0 0% 98%);
+  --destructive: hsl(0 72% 51%);
+  --border: hsl(240 5% 100% / 0.09);
+  --input: hsl(240 5% 100% / 0.12);
+  --ring: var(--primary-glow);
+
+  --spotify: #1ed760;
+  --ytmusic: #ff0033;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-glow: var(--primary-glow);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-spotify: var(--spotify);
+  --color-ytmusic: var(--ytmusic);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    min-height: 100dvh;
+  }
+
+  /* Tailwind 4 resets buttons to the default cursor; restore the pointer. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: hsl(261 85% 72% / 0.35);
+  }
+}
+
+/* Blurred cover art that tints a section with the artwork's colors. */
+.ambient {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient img {
+  position: absolute;
+  inset: -20%;
+  width: 140%;
+  height: 140%;
+  object-fit: cover;
+  filter: blur(80px) saturate(1.6);
+  opacity: 0.45;
+  transform: translateZ(0);
+}
+
+.ambient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 0%, var(--background) 95%);
+}
+
+/* Slowly drifting mosaic of covers behind the connect screen. */
+.cover-wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+  transform: rotate(-8deg) scale(1.3);
+  animation: drift 90s linear infinite alternate;
+}
+
+@keyframes drift {
+  from { translate: 0 0; }
+  to { translate: -6% -10%; }
+}
+
+/* Animated equalizer bars used as the "working" indicator. */
+.equalizer {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 1em;
+}
+
+.equalizer span {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: currentColor;
+  animation: eq 0.9s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.equalizer span:nth-child(2) { animation-delay: -0.3s; }
+.equalizer span:nth-child(3) { animation-delay: -0.6s; }
+.equalizer span:nth-child(4) { animation-delay: -0.15s; }
+
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-wall,
+  .equalizer span {
+    animation: none;
+  }
+}

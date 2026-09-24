@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NUXT_DATABASE_PATH: /data/you2sync.db
+      # Local setup runs over plain HTTP through nginx on port 8080.
+      NUXT_OAUTH_SPOTIFY_REDIRECT_URL: http://127.0.0.1:8080/api/auth/spotify
+      NUXT_SESSION_COOKIE_SECURE: "false"
+    volumes:
+      - data:/data
+    mem_limit: 256m
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  data:
