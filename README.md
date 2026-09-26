@@ -88,9 +88,120 @@ This runs the app and nginx on your machine only. To put it on a server, see [De
 
 The Docker setup is meant for a small VPS or home server with a domain pointing at it. The app needs HTTPS in production: Spotify requires it for non-loopback redirect URIs, and the session cookie is `Secure`.
 
+First, on any server:
+
 1. **Spotify.** Add `https://your.domain/api/auth/spotify` as a redirect URI in the Spotify app.
-2. **Environment.** On the server, clone the repository and create `.env` as in [Setup](#setup).
-3. **Compose.** In `docker-compose.yml`, values under `environment` override `.env`. For the `app` service:
+2. **Environment.** On the server, clone the repository and create `.env` as in [Setup](#setup), with `NUXT_OAUTH_SPOTIFY_REDIRECT_URL=https://your.domain/api/auth/spotify`. On a public domain, also set `NUXT_OWNER_SPOTIFY_ID`; otherwise whoever connects first becomes the owner.
+
+Then pick the option that fits your server.
+
+### Option A: behind an existing Nginx
+
+For a server that already runs Nginx and Certbot for other sites. Docker runs only the app, on localhost; your Nginx proxies the domain to it.
+
+1. **Compose file.** Create `compose.prod.yml` next to `docker-compose.yml`. It is not part of the repository, so `git pull` never touches it.
+
+   ```yaml
+   # Fixed project name: the container, network and volume are prefixed
+   # "you2sync", so they never collide with other Compose projects.
+   name: you2sync
+
+   services:
+     app:
+       build: .
+       restart: unless-stopped
+       env_file: .env
+       environment:
+         NUXT_DATABASE_PATH: /data/you2sync.db
+       # Localhost only, so the app is reachable just through Nginx.
+       # Docker's published ports bypass ufw. Change 3000 on the left
+       # if another service already uses it.
+       ports:
+         - "127.0.0.1:3000:3000"
+       volumes:
+         - data:/data   # SQLite database; survives rebuilds
+       mem_limit: 256m
+       read_only: true
+       tmpfs:
+         - /tmp
+
+   volumes:
+     data:
+   ```
+
+   Add this line to `.env`, so plain `docker compose` commands use that file:
+
+   ```ini
+   COMPOSE_FILE=compose.prod.yml
+   ```
+
+2. **Start.**
+
+   ```sh
+   docker compose up -d --build
+   curl -I http://127.0.0.1:3000   # expect HTTP 200
+   ```
+
+3. **Nginx site.** Create `/etc/nginx/sites-available/your.domain`:
+
+   ```nginx
+   server {
+     listen 80;
+     listen [::]:80;
+     server_name your.domain;
+
+     # Small JSON API; the only large body is the YouTube Music cookie.
+     client_max_body_size 64k;
+
+     # Hashed build assets never change.
+     location /_nuxt/ {
+       proxy_pass http://127.0.0.1:3000;
+       proxy_http_version 1.1;
+       proxy_set_header Connection "";
+       add_header Cache-Control "public, max-age=31536000, immutable";
+     }
+
+     # Host and X-Forwarded-* are required: the app compares them with the
+     # request origin and rejects every write without them.
+     location / {
+       proxy_pass http://127.0.0.1:3000;
+       proxy_http_version 1.1;
+       proxy_set_header Connection "";
+       proxy_set_header Host $host;
+       proxy_set_header X-Forwarded-Host $host;
+       proxy_set_header X-Forwarded-Proto $scheme;
+       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+     }
+   }
+   ```
+
+   ```sh
+   sudo ln -s /etc/nginx/sites-available/your.domain /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+4. **TLS.** Certbot adds the HTTPS server block and the HTTP redirect to that file:
+
+   ```sh
+   sudo certbot --nginx -d your.domain
+   ```
+
+Day to day, from the project folder:
+
+| Task | Command |
+| --- | --- |
+| Status | `docker compose ps` |
+| Logs | `docker compose logs -f` |
+| Stop / start / restart | `docker compose stop` / `start` / `restart` |
+| Remove the container, keep data | `docker compose down` |
+
+A stopped app stays stopped, even after a reboot, and nothing else on the server is affected.
+
+### Option B: bundled nginx
+
+For a server with nothing else on ports 80 and 443. `docker-compose.yml` runs the app and its own nginx.
+
+1. **Compose.** In `docker-compose.yml`, values under `environment` override `.env`. For the `app` service:
    - set `NUXT_OAUTH_SPOTIFY_REDIRECT_URL` to `https://your.domain/api/auth/spotify`;
    - remove `NUXT_SESSION_COOKIE_SECURE: "false"`.
 
@@ -105,7 +216,7 @@ The Docker setup is meant for a small VPS or home server with a domain pointing 
      - ./certs:/etc/nginx/certs:ro   # fullchain.pem and privkey.pem
    ```
 
-4. **TLS.** In `deploy/nginx.conf`, uncomment the `443` server block and set `server_name` to your domain. Replace the `location` blocks of the port 80 server with a redirect, so the app is only served over HTTPS:
+2. **TLS.** In `deploy/nginx.conf`, uncomment the `443` server block and set `server_name` to your domain. Replace the `location` blocks of the port 80 server with a redirect, so the app is only served over HTTPS:
 
    ```nginx
    location / {
@@ -115,17 +226,21 @@ The Docker setup is meant for a small VPS or home server with a domain pointing 
 
    Certificates can come from any ACME client, e.g. [certbot](https://certbot.eff.org). Copy them into `./certs` rather than mounting certbot's `live` directory, which contains symlinks.
 
-5. **Start.**
+3. **Start.**
 
    ```sh
    docker compose up -d --build
    ```
 
+### Updates and backups
+
 **Updating:** `git pull && docker compose up -d --build`. Data survives in the `data` volume.
 
 **Backups:** the SQLite database lives in the `data` volume at `/data/you2sync.db`. Keep `NUXT_ENCRYPTION_KEY` with it; the stored credentials cannot be decrypted without it.
 
-**Without Docker:** run `npm ci && npm run build`, then `node .output/server/index.mjs` with the variables from `.env` set. It listens on `PORT` (default `3000`). Put any HTTPS reverse proxy in front that forwards `Host` and `X-Forwarded-Proto`.
+### Without Docker
+
+Run `npm ci && npm run build`, then `node .output/server/index.mjs` with the variables from `.env` set. It listens on `PORT` (default `3000`). Put any HTTPS reverse proxy in front that forwards `Host` and `X-Forwarded-Proto`.
 
 ## Connecting YouTube Music
 
