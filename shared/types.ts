@@ -118,6 +118,8 @@ export interface PlaylistPlan {
   unmatched: UnmatchedTrack[]
   unchanged: number
   error?: string
+  // Set when the error is an expired session; names the service to reconnect.
+  reconnect?: Service
 }
 
 export interface PlanDecision {
@@ -136,6 +138,8 @@ export interface PlaylistResult {
   unmatched: number
   created: boolean
   error?: string
+  // Set when the error is an expired session; names the service to reconnect.
+  reconnect?: Service
 }
 
 export interface JobState {
@@ -150,6 +154,8 @@ export interface JobState {
   plans: PlaylistPlan[]
   results: PlaylistResult[]
   error?: string
+  // Set when the error is an expired session; names the service to reconnect.
+  reconnect?: Service
 }
 
 export enum ReviewStatus {

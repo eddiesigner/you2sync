@@ -114,9 +114,11 @@ function dismiss(item: ReviewItem) {
               <Button size="sm" variant="secondary" class="rounded-full" :disabled="busy.has(item.id)" @click="openSearch(item)">
                 <Search /> Find
               </Button>
-              <Button size="icon-sm" variant="ghost" class="rounded-full" :aria-label="`Dismiss ${item.track.title}`" :disabled="busy.has(item.id)" @click="dismiss(item)">
-                <X />
-              </Button>
+              <ButtonTooltip label="Dismiss">
+                <Button size="icon-sm" variant="ghost" class="rounded-full" :aria-label="`Dismiss ${item.track.title}`" :disabled="busy.has(item.id)" @click="dismiss(item)">
+                  <X />
+                </Button>
+              </ButtonTooltip>
             </div>
           </li>
         </ul>

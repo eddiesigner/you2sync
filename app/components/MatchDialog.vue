@@ -56,10 +56,12 @@ watch(() => [open.value, props.item?.id], () => {
 
       <form class="flex gap-2" role="search" @submit.prevent="search(query)">
         <Input v-model="query" aria-label="Search query" class="rounded-full" />
-        <Button type="submit" size="icon" class="shrink-0 rounded-full" aria-label="Search" :disabled="loading">
-          <Loader2 v-if="loading" class="animate-spin" />
-          <Search v-else />
-        </Button>
+        <ButtonTooltip label="Search">
+          <Button type="submit" size="icon" class="shrink-0 rounded-full" aria-label="Search" :disabled="loading">
+            <Loader2 v-if="loading" class="animate-spin" />
+            <Search v-else />
+          </Button>
+        </ButtonTooltip>
       </form>
 
       <div class="-mx-2 min-h-40 flex-1 overflow-y-auto" aria-live="polite" :aria-busy="loading">

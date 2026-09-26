@@ -14,8 +14,8 @@ export function errorText(error: unknown): string {
 }
 
 /*
- * $fetch for the app's API. An expired service session (401) sends the
- * user back to the connect screen instead of failing silently.
+ * $fetch for the app's API. An expired service session (401) shows a toast
+ * that links to where it is renewed; a lost account goes to the connect screen.
  */
 export const api = $fetch.create({
   async onResponseError({ response }) {
@@ -25,10 +25,16 @@ export const api = $fetch.create({
 
     const service = (response._data as ApiErrorData)?.data?.service
     if (service) {
-      toast.error(`${SERVICE_LABEL[service]} needs to be reconnected`)
+      const target = RECONNECT[service]
+      toast.error(`${SERVICE_LABEL[service]} needs to be reconnected`, {
+        action: { label: target.label, onClick: () => navigateTo(target.to, { external: target.external }) },
+      })
     }
 
-    await useAuth().refresh()
-    await navigateTo('/connect')
+    const { state, refresh } = useAuth()
+    await refresh()
+    if (!state.value.ready) {
+      await navigateTo('/connect')
+    }
   },
 })

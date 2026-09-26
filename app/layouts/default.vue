@@ -62,9 +62,11 @@ const links = computed(() => [
               </AvatarFallback>
             </Avatar>
           </div>
-          <Button variant="ghost" size="icon" aria-label="Sign out" @click="logout">
-            <LogOut />
-          </Button>
+          <ButtonTooltip label="Sign out">
+            <Button variant="ghost" size="icon" aria-label="Sign out" @click="logout">
+              <LogOut />
+            </Button>
+          </ButtonTooltip>
         </div>
       </div>
     </header>

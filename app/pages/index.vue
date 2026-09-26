@@ -127,9 +127,11 @@ async function startSync(playlistIds: string[]) {
               <span class="flex items-center gap-2 py-1.5 pr-2 text-sm font-medium">
                 <BrandIcon :service="target" class="size-5" /> {{ SERVICE_LABEL[target] }}
               </span>
-              <Button variant="ghost" size="icon-sm" class="rounded-full" :aria-label="`Swap direction: sync from ${SERVICE_LABEL[target]} to ${SERVICE_LABEL[source]}`" @click="swap">
-                <ArrowLeftRight />
-              </Button>
+              <ButtonTooltip label="Swap direction">
+                <Button variant="ghost" size="icon-sm" class="rounded-full" :aria-label="`Swap direction: sync from ${SERVICE_LABEL[target]} to ${SERVICE_LABEL[source]}`" @click="swap">
+                  <ArrowLeftRight />
+                </Button>
+              </ButtonTooltip>
             </div>
           </div>
 
@@ -137,13 +139,18 @@ async function startSync(playlistIds: string[]) {
             <p id="mode-label" class="mb-2 text-xs font-medium text-muted-foreground">
               What to sync
             </p>
-            <ToggleGroup :model-value="mode" type="single" aria-labelledby="mode-label" @update:model-value="setMode" class="rounded-full border border-white/10 bg-black/30 p-1.5 backdrop-blur">
-              <ToggleGroupItem :value="SyncMode.Changes" class="rounded-full px-4 data-[state=on]:bg-white/15" title="Add and remove only what changed since the last sync">
-                Only changes
-              </ToggleGroupItem>
-              <ToggleGroupItem :value="SyncMode.Mirror" class="rounded-full px-4 data-[state=on]:bg-white/15" title="Make the target an exact copy of the source">
-                Full mirror
-              </ToggleGroupItem>
+            <!-- The tooltip trigger overwrites data-state on the items; style by aria-pressed. -->
+            <ToggleGroup :model-value="mode" type="single" :spacing="1" aria-labelledby="mode-label" @update:model-value="setMode" class="rounded-full border border-white/10 bg-black/30 p-1.5 backdrop-blur">
+              <ButtonTooltip label="Add and remove only what changed since the last sync">
+                <ToggleGroupItem :value="SyncMode.Changes" class="rounded-full px-4 aria-pressed:bg-white/15">
+                  Only changes
+                </ToggleGroupItem>
+              </ButtonTooltip>
+              <ButtonTooltip label="Make the target an exact copy of the source">
+                <ToggleGroupItem :value="SyncMode.Mirror" class="rounded-full px-4 aria-pressed:bg-white/15">
+                  Full mirror
+                </ToggleGroupItem>
+              </ButtonTooltip>
             </ToggleGroup>
           </div>
         </div>
@@ -159,9 +166,11 @@ async function startSync(playlistIds: string[]) {
       <Button variant="ghost" class="rounded-full" :disabled="!editable.length" @click="toggleAll">
         {{ allSelected ? 'Clear selection' : 'Select all' }}
       </Button>
-      <Button variant="ghost" size="icon" class="ml-auto rounded-full" aria-label="Reload library" :disabled="status === 'pending'" @click="refresh()">
-        <RefreshCw :class="{ 'animate-spin': status === 'pending' }" />
-      </Button>
+      <ButtonTooltip label="Reload library">
+        <Button variant="ghost" size="icon" class="ml-auto rounded-full" aria-label="Reload library" :disabled="status === 'pending'" @click="refresh()">
+          <RefreshCw :class="{ 'animate-spin': status === 'pending' }" />
+        </Button>
+      </ButtonTooltip>
     </div>
 
     <!-- Playlist grid -->

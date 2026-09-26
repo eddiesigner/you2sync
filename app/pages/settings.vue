@@ -24,11 +24,22 @@ useHead({ title: 'Settings · You2Sync' })
 const { state, refresh: refreshAuth } = useAuth()
 const { refresh: refreshLibrary } = useLibrary()
 const services = [Service.Spotify, Service.YTMusic]
+const { color: primaryColor, reset: resetPrimaryColor } = usePrimaryColor()
 
 const cookie = ref('')
 const cookieOpen = ref(false)
 const cookieError = ref<string>()
 const savingCookie = ref(false)
+
+// Links to an expired YouTube Music session land here with the dialog open.
+const route = useRoute()
+watch(() => route.query.update, (update) => {
+  if (update !== UPDATE_COOKIE_QUERY.update) {
+    return
+  }
+  cookieOpen.value = true
+  navigateTo({ query: {} }, { replace: true })
+}, { immediate: true })
 
 async function updateCookie() {
   cookieError.value = undefined
@@ -112,6 +123,7 @@ async function unlinkAccounts() {
                     Paste a fresh cookie header from music.youtube.com when the current one expires. It must belong to the same account.
                   </DialogDescription>
                 </DialogHeader>
+                <CookieSteps />
                 <div class="space-y-1.5">
                   <Label for="settings-cookie">Cookie header</Label>
                   <Textarea id="settings-cookie" v-model="cookie" rows="4" required autocomplete="off" spellcheck="false" class="field-sizing-fixed resize-none overflow-y-auto font-mono text-xs break-all" :aria-invalid="!!cookieError" />
@@ -129,6 +141,28 @@ async function unlinkAccounts() {
           </Dialog>
         </li>
       </ul>
+    </section>
+
+    <section class="mt-10" aria-labelledby="appearance-title">
+      <h2 id="appearance-title" class="text-lg font-semibold">
+        Appearance
+      </h2>
+      <div class="mt-3 flex flex-col gap-3 rounded-2xl border border-white/10 bg-card/60 p-4 sm:flex-row sm:items-center">
+        <div class="flex-1">
+          <Label for="settings-primary-color" class="font-medium">
+            Primary color
+          </Label>
+          <p class="text-sm text-muted-foreground">
+            Used for buttons, highlights and focus rings. Saved in this browser.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <input id="settings-primary-color" v-model="primaryColor" type="color" class="size-9 cursor-pointer rounded-full border border-white/10 bg-transparent p-0.5 [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0">
+          <Button variant="secondary" size="sm" class="rounded-full" :disabled="primaryColor === DEFAULT_PRIMARY" @click="resetPrimaryColor">
+            Reset
+          </Button>
+        </div>
+      </div>
     </section>
 
     <section class="mt-10" aria-labelledby="danger-title">

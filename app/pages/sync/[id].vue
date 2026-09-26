@@ -18,6 +18,13 @@ import { Progress } from '@/components/ui/progress'
 useHead({ title: 'Sync · You2Sync' })
 
 const POLL_INTERVAL_MS = 1000
+const NO_PLAYLIST_READ = 'None of the selected playlists could be read'
+
+const OUTCOME_TITLE: Record<SyncOutcome, string> = {
+  [SyncOutcome.Success]: 'Sync complete',
+  [SyncOutcome.Partial]: 'Sync finished with errors',
+  [SyncOutcome.Failed]: 'Sync failed',
+}
 
 const route = useRoute()
 const jobId = computed(() => String(route.params.id))
@@ -93,6 +100,29 @@ const resultTotals = computed(() => {
     removed: results.reduce((sum, r) => sum + r.removed, 0),
     unmatched: results.reduce((sum, r) => sum + r.unmatched, 0),
     failed: results.filter(r => r.error).length,
+  }
+})
+
+const outcome = computed(() => syncOutcome(job.value?.results ?? []))
+const resultsReconnect = computed(() => job.value?.results.find(r => r.reconnect)?.reconnect)
+
+/*
+ * The whole sync failed, or every playlist failed to plan so there is
+ * nothing to review. Undefined otherwise.
+ */
+const failure = computed<Pick<JobState, 'error' | 'reconnect'> | undefined>(() => {
+  const state = job.value
+  if (state?.status === JobStatus.Failed) {
+    return state
+  }
+  if (state?.status !== JobStatus.Ready || !state.plans.length || state.plans.some(plan => !plan.error)) {
+    return undefined
+  }
+
+  const errors = new Set(state.plans.map(plan => plan.error))
+  return {
+    error: errors.size === 1 ? state.plans[0]!.error : NO_PLAYLIST_READ,
+    reconnect: state.plans.find(plan => plan.reconnect)?.reconnect,
   }
 })
 
@@ -173,19 +203,26 @@ async function apply() {
       </section>
 
       <!-- Failed -->
-      <div v-else-if="job.status === JobStatus.Failed" class="mt-16 text-center" role="alert">
+      <div v-else-if="failure" class="mt-16 text-center" role="alert">
         <AlertTriangle class="mx-auto size-10 text-destructive" aria-hidden="true" />
         <h1 class="mt-4 text-2xl font-bold">
           Sync failed
         </h1>
         <p class="mt-2 text-muted-foreground">
-          {{ job.error }}
+          {{ failure.error }}
         </p>
-        <Button as-child class="mt-6 rounded-full">
-          <NuxtLink to="/">
-            Back to library
-          </NuxtLink>
-        </Button>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <Button as-child :variant="failure.reconnect ? 'secondary' : 'default'" class="rounded-full">
+            <NuxtLink to="/">
+              Back to library
+            </NuxtLink>
+          </Button>
+          <Button v-if="failure.reconnect" as-child class="rounded-full">
+            <NuxtLink :to="RECONNECT[failure.reconnect].to" :external="RECONNECT[failure.reconnect].external">
+              {{ RECONNECT[failure.reconnect].label }}
+            </NuxtLink>
+          </Button>
+        </div>
       </div>
 
       <!-- Ready: preview and confirm -->
@@ -283,14 +320,20 @@ async function apply() {
 
       <!-- Done: results -->
       <template v-else>
-        <header class="mt-6 text-center">
-          <span class="mx-auto grid size-16 place-items-center rounded-full bg-primary-glow text-black shadow-[0_0_60px] shadow-primary-glow/50">
+        <header class="mt-6 text-center" :role="outcome === SyncOutcome.Success ? undefined : 'alert'">
+          <span v-if="outcome === SyncOutcome.Success" class="mx-auto grid size-16 place-items-center rounded-full bg-primary-glow text-black shadow-[0_0_60px] shadow-primary-glow/50">
             <Check class="size-8" aria-hidden="true" />
           </span>
+          <span v-else class="mx-auto grid size-16 place-items-center rounded-full" :class="outcome === SyncOutcome.Failed ? 'bg-destructive/20 text-destructive' : 'bg-amber-300/20 text-amber-300'">
+            <AlertTriangle class="size-8" aria-hidden="true" />
+          </span>
           <h1 class="mt-5 text-3xl font-bold tracking-tight">
-            Sync complete
+            {{ OUTCOME_TITLE[outcome] }}
           </h1>
           <p class="mt-2 text-muted-foreground">
+            <template v-if="resultTotals.failed">
+              {{ resultTotals.failed }} of {{ plural(job.results.length, 'playlist') }} failed ·
+            </template>
             {{ plural(resultTotals.added, 'song') }} added · {{ plural(resultTotals.removed, 'song') }} removed<template v-if="resultTotals.unmatched">
               · {{ resultTotals.unmatched }} to review
             </template>
@@ -304,8 +347,9 @@ async function apply() {
               <p class="truncate font-medium">
                 {{ result.name }}
               </p>
-              <p v-if="result.error" class="truncate text-sm text-destructive">
-                {{ result.error }}
+              <p v-if="result.error" class="flex items-center gap-2 text-sm text-destructive">
+                <span class="truncate">{{ result.error }}</span>
+                <ReconnectLink v-if="result.reconnect" :service="result.reconnect" />
               </p>
               <p v-else class="text-sm text-muted-foreground">
                 <template v-if="result.created">
@@ -327,9 +371,14 @@ async function apply() {
               Review unmatched songs
             </NuxtLink>
           </Button>
-          <Button as-child class="rounded-full">
+          <Button as-child :variant="resultsReconnect ? 'secondary' : 'default'" class="rounded-full">
             <NuxtLink to="/">
               Back to library
+            </NuxtLink>
+          </Button>
+          <Button v-if="resultsReconnect" as-child class="rounded-full">
+            <NuxtLink :to="RECONNECT[resultsReconnect].to" :external="RECONNECT[resultsReconnect].external">
+              {{ RECONNECT[resultsReconnect].label }}
             </NuxtLink>
           </Button>
         </div>

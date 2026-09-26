@@ -19,7 +19,7 @@ import {
   otherService,
 } from '#shared/types'
 import { mapLimit } from '../lib/util'
-import type { MusicProvider } from '../providers/types'
+import { type MusicProvider, ProviderAuthError } from '../providers/types'
 import { type LinkRow, createLink, deleteLink, findLinkBy, linkedId, readSnapshot, saveSnapshots } from '../repositories/links'
 import { MatchOrigin, findMatch, saveMatch } from '../repositories/matches'
 import { isDismissed, resolveReviewsFor, upsertReview } from '../repositories/reviews'
@@ -106,8 +106,7 @@ export function startPlan(selection: SyncSelection): JobState {
   jobs.set(job.state.id, job)
 
   runPlan(job, selection).catch((error) => {
-    job.state.status = JobStatus.Failed
-    job.state.error = errorMessage(error)
+    Object.assign(job.state, { status: JobStatus.Failed, ...failure(error) })
   })
 
   return job.state
@@ -118,6 +117,14 @@ function errorMessage(error: unknown): string {
     return String(error.statusMessage)
   }
   return error instanceof Error ? error.message : String(error)
+}
+
+type Failure = Pick<PlaylistResult, 'error' | 'reconnect'>
+
+// Error fields for plans, results and jobs. Expired sessions also name the
+// service, so the UI can link straight to where it is renewed.
+function failure(error: unknown): Failure {
+  return { error: errorMessage(error), reconnect: error instanceof ProviderAuthError ? error.service : undefined }
 }
 
 async function runPlan(job: Job, selection: SyncSelection) {
@@ -136,7 +143,7 @@ async function runPlan(job: Job, selection: SyncSelection) {
       job.internals.push(await planPlaylist(summary, source, target, targetPlaylists, job.state))
     }
     catch (error) {
-      job.internals.push(failedPlan(summary, errorMessage(error)))
+      job.internals.push(failedPlan(summary, failure(error)))
     }
     job.state.done++
   }
@@ -146,7 +153,7 @@ async function runPlan(job: Job, selection: SyncSelection) {
   job.state.status = JobStatus.Ready
 }
 
-function failedPlan(summary: PlaylistSummary, error: string): InternalPlan {
+function failedPlan(summary: PlaylistSummary, fields: Failure): InternalPlan {
   return {
     summary,
     sourceTrackIds: [],
@@ -161,7 +168,7 @@ function failedPlan(summary: PlaylistSummary, error: string): InternalPlan {
       remove: [],
       unmatched: [],
       unchanged: 0,
-      error,
+      ...fields,
     },
   }
 }
@@ -360,8 +367,7 @@ export function startApply(jobId: string, decisions: PlanDecision[]): JobState {
 
   const byKey = new Map(decisions.map(decision => [decision.key, decision]))
   runApply(job, byKey).catch((error) => {
-    job.state.status = JobStatus.Failed
-    job.state.error = errorMessage(error)
+    Object.assign(job.state, { status: JobStatus.Failed, ...failure(error) })
   })
 
   return getJob(jobId)
@@ -374,6 +380,14 @@ async function runApply(job: Job, decisions: Map<string, PlanDecision>) {
 
   job.state.total = runnable.length
 
+  // Playlists that could not be planned count as failed in the results too.
+  for (const { plan } of job.internals) {
+    if (!plan.error) {
+      continue
+    }
+    job.state.results.push(failedResult(plan, plan))
+  }
+
   for (const internal of runnable) {
     const { plan } = internal
     job.state.current = { name: plan.sourcePlaylist.name, image: plan.sourcePlaylist.image }
@@ -381,22 +395,27 @@ async function runApply(job: Job, decisions: Map<string, PlanDecision>) {
       job.state.results.push(await applyPlan(internal, decisions.get(plan.key), source, target))
     }
     catch (error) {
-      job.state.results.push({
-        key: plan.key,
-        name: plan.sourcePlaylist.name,
-        image: plan.sourcePlaylist.image,
-        added: 0,
-        removed: 0,
-        unmatched: plan.unmatched.length,
-        created: false,
-        error: errorMessage(error),
-      })
+      job.state.results.push(failedResult(plan, failure(error)))
     }
     job.state.done++
   }
 
   job.state.current = undefined
   job.state.status = JobStatus.Done
+}
+
+function failedResult(plan: PlaylistPlan, fields: Failure): PlaylistResult {
+  return {
+    key: plan.key,
+    name: plan.sourcePlaylist.name,
+    image: plan.sourcePlaylist.image,
+    added: 0,
+    removed: 0,
+    unmatched: plan.unmatched.length,
+    created: false,
+    error: fields.error,
+    reconnect: fields.reconnect,
+  }
 }
 
 async function applyPlan(internal: InternalPlan, decision: PlanDecision | undefined, source: MusicProvider, target: MusicProvider): Promise<PlaylistResult> {

@@ -41,6 +41,7 @@ function toggleAllRemovals(checked: boolean | 'indeterminate') {
         </h3>
         <p v-if="plan.error" class="mt-1 flex items-center gap-1.5 text-sm text-destructive">
           <AlertTriangle class="size-4 shrink-0" aria-hidden="true" /> {{ plan.error }}
+          <ReconnectLink v-if="plan.reconnect" :service="plan.reconnect" />
         </p>
         <div v-else class="mt-1.5 flex flex-wrap gap-1.5">
           <Badge v-if="plan.willCreate" class="bg-primary-glow/20 text-primary-glow">
