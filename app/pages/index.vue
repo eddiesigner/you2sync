@@ -161,7 +161,7 @@ async function startSync(playlistIds: string[]) {
     <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 pt-6 sm:px-6">
       <div class="relative min-w-0 flex-1 sm:max-w-xs">
         <Search class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-        <Input v-model="query" type="search" placeholder="Filter playlists" aria-label="Filter playlists" class="rounded-full pl-9" />
+        <Input v-model="query" type="search" placeholder="Search playlists" aria-label="Search playlists" class="rounded-full pl-9" />
       </div>
       <Button variant="ghost" class="rounded-full" :disabled="!editable.length" @click="toggleAll">
         {{ allSelected ? 'Clear selection' : 'Select all' }}

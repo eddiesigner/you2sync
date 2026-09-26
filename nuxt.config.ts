@@ -53,6 +53,7 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#0a0a0b' },
         { name: 'color-scheme', content: 'dark' },
         { name: 'referrer', content: 'no-referrer' },
+        { name: 'robots', content: 'noindex, nofollow' },
       ],
       link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     },
@@ -91,6 +92,8 @@ export default defineNuxtConfig({
         'Referrer-Policy': 'no-referrer',
         'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
         'Cross-Origin-Opener-Policy': 'same-origin',
+        // Private instance: keep every page, API response and asset out of search engines.
+        'X-Robots-Tag': 'noindex, nofollow',
       },
     },
     '/api/**': { headers: { 'Cache-Control': 'no-store' } },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Check, ChevronDown, Info, Loader2, ShieldCheck } from '@lucide/vue'
+import { ArrowRight, Check, ChevronDown, Eye, Info, Link2, ListMusic, Loader2, ShieldCheck } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { Service } from '#shared/types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -62,13 +62,13 @@ async function connectYTMusic() {
         </p>
         <ul class="mt-8 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
           <li class="flex items-center gap-2">
-            <Check class="size-4 text-primary-glow" aria-hidden="true" /> Playlists and liked songs
+            <ListMusic class="size-4 text-primary-glow" aria-hidden="true" /> Playlists and liked songs
           </li>
           <li class="flex items-center gap-2">
-            <Check class="size-4 text-primary-glow" aria-hidden="true" /> Linked by id, survives renames
+            <Link2 class="size-4 text-primary-glow" aria-hidden="true" /> Linked by id, survives renames
           </li>
           <li class="flex items-center gap-2">
-            <Check class="size-4 text-primary-glow" aria-hidden="true" /> Preview before removing
+            <Eye class="size-4 text-primary-glow" aria-hidden="true" /> Preview before removing
           </li>
           <li class="flex items-center gap-2">
             <ShieldCheck class="size-4 text-primary-glow" aria-hidden="true" /> Credentials encrypted on your server
