@@ -71,7 +71,8 @@ const links = computed(() => [
       </div>
     </header>
 
-    <main id="main" class="relative flex-1 pb-24 md:pb-10">
+    <!-- Bottom padding clears the fixed mobile nav, absent on the connect page. -->
+    <main id="main" class="relative flex-1" :class="{ 'pb-24 md:pb-10': showNav }">
       <slot />
     </main>
 

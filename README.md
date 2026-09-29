@@ -9,6 +9,12 @@ Self-hosted playlist sync between Spotify and YouTube Music.
 - Every removal is previewed and must be confirmed.
 - Songs without a confident match are skipped and listed under **Review**, where you pick the right version or dismiss them.
 
+## Screenshots
+
+![Connect screen: link Spotify and YouTube Music](docs/screenshots/connect.png)
+
+![Library: pick playlists, direction and sync mode](docs/screenshots/library.png)
+
 ## How it works
 
 ```
